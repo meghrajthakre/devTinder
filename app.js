@@ -2,13 +2,19 @@ const express = require('express');
 
 const app = express();
 
-app.use('/home', (req , res)=>{
-    res.send('Hello from home, Express!');
-})
-app.use('/about', (req , res)=>{
-    res.send('about here');
-})
+app.use('/user', [(req, res, next) => {
+    res.send('Welcome')
 
-app.listen(5000, (port) => {
-    console.log(`Server is running on port 5000`);
+    next()
+}
+, (req, res)=>{
+    res.send('Welcome 2')
+}]
+)
+
+
+
+app.listen(5000, ()=>{
+    console.log("listening on port 5000");
+    
 })
