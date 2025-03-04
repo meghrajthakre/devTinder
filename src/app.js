@@ -71,13 +71,38 @@ app.delete("/delete", async (req, res) => {
 });
 
 // find the document and update 
-app.patch('/user/update', async (req, res) => {
-    const userId = req.body._id;
+app.patch('/user/update/:_id', async (req, res) => {
+    const userId = req.params._id;
+    console.log(userId)
     const data = req.body
+    
     try {
+        ALLOWED_UPDATE =["firstName",
+            "lastName",
+            "mobileNumber",
+            "age",
+            "gender"
+        ]
+        const isUpdateAllowed = Object.keys(data).every((k)=>{
+            ALLOWED_UPDATE.includes(k)
+        })
+        if(!isUpdateAllowed){
+            // throw new Error("updates not allowed...")
+            // res.status(400).send("updates not allowed...")
+            console.error("updates not allowed")
+            
+
+        }
+
+
+
+
         const updateUser = await User.findOneAndUpdate({_id:userId}, data, {
             returnDocument:'after',
+            runValidators:true,
         });
+
+      
         if(updateUser){
             res.send(updateUser);
             console.log("user updated => " + updateUser);
@@ -89,7 +114,8 @@ app.patch('/user/update', async (req, res) => {
 
         
     } catch (error) {
-        console.log(error + " issue while updating user");
+        // console.log(error + " issue while updating user");
+        res.status(404).send("please try again");
         
     }
 })
