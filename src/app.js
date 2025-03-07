@@ -3,16 +3,56 @@ const app = express();
 const { dbConnection } = require("./config/database");
 const User = require("./models/user");
 const { trusted } = require("mongoose");
+const { valideSignUpData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 app.use(express.json());
 
 // creating a instance of the Models
 app.post("/signup", async (req, res) => {
   try {
-    const user = new User(req.body);
+    // validating the data
+    valideSignUpData(req);
+
+    // bcrpt the password using Bcrypt
+    const { firstName, lastName, email, password } = req.body;
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    // console.log(passwordHash)
+
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+    });
     const createdUser = await user.save();
     res.send(createdUser);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// login
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw new Error("invalid cardentials");
+    }
+    const comparePass = await bcrypt.compare(password, user.password);
+
+    if (comparePass) {
+      res.send("Login Succesfull");
+
+    } else {
+      throw new Error("invalid cardentials");
+
+
+    }
+  } catch (error) {
+    console.log("user not valid " + error)
+    res.status(404).send("Not Found")
   }
 });
 
@@ -57,7 +97,9 @@ app.get("/feed", async (req, res) => {
 app.delete("/delete", async (req, res) => {
   const userId = req.body._id;
   try {
-    const deletedUser = await User.findByIdAndDelete({ _id: userId },[ options.returnDocument='before']);
+    const deletedUser = await User.findByIdAndDelete({ _id: userId }, [
+      (options.returnDocument = "before"),
+    ]);
     if (deletedUser) {
       res.send(deletedUser);
       console.log("user deleted => " + deletedUser);
@@ -70,85 +112,65 @@ app.delete("/delete", async (req, res) => {
   }
 });
 
-// find the document and update 
-app.patch('/user/update/:_id', async (req, res) => {
-    const userId = req.params._id;
-    console.log(userId)
-    const data = req.body
-    
-    try {
-        ALLOWED_UPDATE =["firstName",
-            "lastName",
-            "mobileNumber",
-            "age",
-            "gender"
-        ]
-        const isUpdateAllowed = Object.keys(data).every((k)=>{
-            ALLOWED_UPDATE.includes(k)
-        })
-        if(!isUpdateAllowed){
-            // throw new Error("updates not allowed...")
-            // res.status(400).send("updates not allowed...")
-            console.error("updates not allowed")
-            
+// find the document and update
+app.patch("/user/update/:_id", async (req, res) => {
+  const userId = req.params._id;
+  console.log(userId);
+  const data = req.body;
 
-        }
-
-
-
-
-        const updateUser = await User.findOneAndUpdate({_id:userId}, data, {
-            returnDocument:'after',
-            runValidators:true,
-        });
-
-      
-        if(updateUser){
-            res.send(updateUser);
-            console.log("user updated => " + updateUser);
-        }
-        else{
-            console.log("user not updated => ")
-            res.status(404).send("not found and no documentation and updation requested");
-        }
-
-        
-    } catch (error) {
-        // console.log(error + " issue while updating user");
-        res.status(404).send("please try again");
-        
+  try {
+    ALLOWED_UPDATE = ["firstName", "lastName", "mobileNumber", "age", "gender"];
+    const isUpdateAllowed = Object.keys(data).every((k) => {
+      ALLOWED_UPDATE.includes(k);
+    });
+    if (!isUpdateAllowed) {
+      // throw new Error("updates not allowed...")
+      // res.status(400).send("updates not allowed...")
+      console.error("updates not allowed");
     }
-})
+
+    const updateUser = await User.findOneAndUpdate({ _id: userId }, data, {
+      returnDocument: "after",
+      runValidators: true,
+    });
+
+    if (updateUser) {
+      res.send(updateUser);
+      console.log("user updated => " + updateUser);
+    } else {
+      console.log("user not updated => ");
+      res
+        .status(404)
+        .send("not found and no documentation and updation requested");
+    }
+  } catch (error) {
+    // console.log(error + " issue while updating user");
+    res.status(404).send("please try again");
+  }
+});
 
 // replacing the document
-app.put('/user/replace', async (req, res) => {
-    const userId = req.body._id;
-    const data = req.body;
-    console.log(data);
-    console.log(userId);
-    
-    try {
-        const replaceUser = await User.findOneAndReplace({_id: userId}, data)
-        if(replaceUser){
-            res.send(replaceUser);
-            console.log("user replaced => " + replaceUser);
-        }
-        else{
-            console.log("user not replaced => ")
-            res.status(404).send("not found and no documentation and replacement requested");
-        }
+app.put("/user/replace", async (req, res) => {
+  const userId = req.body._id;
+  const data = req.body;
+  console.log(data);
+  console.log(userId);
 
-
-        
-    } catch (error) {
-        console.log(error + " issue while updating user");
-        
+  try {
+    const replaceUser = await User.findOneAndReplace({ _id: userId }, data);
+    if (replaceUser) {
+      res.send(replaceUser);
+      console.log("user replaced => " + replaceUser);
+    } else {
+      console.log("user not replaced => ");
+      res
+        .status(404)
+        .send("not found and no documentation and replacement requested");
     }
-})
-
-
-
-
+  } catch (error) {
+    console.log(error + " issue while updating user");
+  }
+});
 
 // dbConnections
 dbConnection()
