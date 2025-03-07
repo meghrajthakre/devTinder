@@ -5,7 +5,10 @@ const User = require("./models/user");
 const { trusted } = require("mongoose");
 const { valideSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const coockiesParser = require("cookie-parser");
 app.use(express.json());
+app.use(coockiesParser());
 
 // creating a instance of the Models
 app.post("/signup", async (req, res) => {
@@ -43,16 +46,46 @@ app.post("/login", async (req, res) => {
     const comparePass = await bcrypt.compare(password, user.password);
 
     if (comparePass) {
-      res.send("Login Succesfull");
+      // create a jwt token
+      const token = await jwt.sign({ _id: user._id }, "shhhhh");
 
+      res.cookie("token", token);
+
+      res.send("Login Succesfull");
     } else {
       throw new Error("invalid cardentials");
-
-
     }
   } catch (error) {
-    console.log("user not valid " + error)
-    res.status(404).send("Not Found")
+    console.log("user not valid " + error);
+    res.status(404).send("Not Found");
+  }
+});
+
+// profile
+
+app.get("/profile", async (req, res) => {
+  // const id = req.body._id
+  try {
+    const cookies = req.cookies;
+    const { token } = cookies;
+    // console.log(token)
+    if (!token) {
+      throw new Error("Invalid Token");
+    }
+
+    const decodeMessage = await jwt.verify(token, "shhhhh");
+    const { _id } = decodeMessage;
+    const user = await User.findById(_id);
+
+    if (!user) {
+      throw new Error("Invalied User");
+    }
+
+    res.send(user);
+
+    // res.send(req.cookies)
+  } catch (error) {
+    console.log("cannot get profile " + error);
   }
 });
 
