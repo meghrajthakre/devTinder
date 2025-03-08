@@ -13,7 +13,7 @@ function valideSignUpData(req) {
         
     }
     else if(!validator.isStrongPassword(password)){
-        throw new Error("Email is Not Valid");
+        throw new Error("Password Is Not Strong");
         
     }
 

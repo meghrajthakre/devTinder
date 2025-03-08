@@ -1,25 +1,30 @@
-const userAuth = (req, res, next) => {
-  const token = "1212";
-  const isUserIsAuthenticated = token === "1212";
+const jwt = require("jsonwebtoken");
+const User = require('../models/user')
 
-  if (!isUserIsAuthenticated) {
-    console.log("user is not authenticated"); // If token is invalid or not present, it will not reach here.
-    return res.status(401).send("Unauthorized access");
-  } else {
-    console.log("user is authenticated");
-    next();
+const userAuth = async (req, res, next) => {
+ try {
+  const cookie = req.cookies;
+  const {token} = cookie
+  
+  if(!token){
+    throw new Error("Invalid Token")
   }
+
+  const decodeData = await jwt.verify(token, "shhhhh");
+  const {_id} = decodeData;
+  const user = await User.findById({_id:_id})
+  if(!user){
+    throw new Error("User doen Not Exists")
+  }
+  req.user = user
+  next()
+  
+ } catch (error) {
+  res.status(400).send("Error : " + error.message)
+ }
+
+  
 };
 
-const adminAuth = (req, res, next) => {
-    const token = "1313"
-    const isAdminisAuthenticated = token === "1313"
-    if(!isAdminisAuthenticated){
-        res.status(403).send("Unauthorized access");
-    }
-    else{
-        next();
-    }
-}
 
-module.exports = { userAuth , adminAuth};
+module.exports = { userAuth };

@@ -2,90 +2,72 @@ const express = require("express");
 const app = express();
 const { dbConnection } = require("./config/database");
 const User = require("./models/user");
-const { trusted } = require("mongoose");
 const { valideSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const coockiesParser = require("cookie-parser");
+const { userAuth } = require("./middleware/auth");
 app.use(express.json());
 app.use(coockiesParser());
 
 // creating a instance of the Models
 app.post("/signup", async (req, res) => {
   try {
-    // validating the data
+    // validation of user data
     valideSignUpData(req);
 
-    // bcrpt the password using Bcrypt
+    // saving the data
     const { firstName, lastName, email, password } = req.body;
-
     const passwordHash = await bcrypt.hash(password, 10);
-    // console.log(passwordHash)
 
-    const user = new User({
+    const user = await new User({
       firstName,
       lastName,
       email,
       password: passwordHash,
     });
-    const createdUser = await user.save();
-    res.send(createdUser);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const savedData = await user.save();
+    if (!savedData) {
+      throw new Error("User Not Saved!!!!");
+    }
+    res.send(savedData);
+  } catch (error) {
+    res.status(400).send("ERROR :" + error.message);
   }
 });
 
 // login
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
   try {
+    const { email, password } = req.body;
+
     const user = await User.findOne({ email: email });
     if (!user) {
-      throw new Error("invalid cardentials");
+      throw new Error("Email is Not Valid");
     }
-    const comparePass = await bcrypt.compare(password, user.password);
-
-    if (comparePass) {
-      // create a jwt token
+    const isPasswordVerify = await bcrypt.compare(password, user.password);
+    if (isPasswordVerify) {
+      // setling the jwt token
       const token = await jwt.sign({ _id: user._id }, "shhhhh");
-
+      console.log(token);
       res.cookie("token", token);
-
-      res.send("Login Succesfull");
+      res.send("Login Succesfull!!!!");
     } else {
-      throw new Error("invalid cardentials");
+      throw new Error("Password is incorrect");
     }
   } catch (error) {
-    console.log("user not valid " + error);
-    res.status(404).send("Not Found");
+    res.status(400).send("ERROR :" + error.message);
   }
 });
 
 // profile
 
-app.get("/profile", async (req, res) => {
-  // const id = req.body._id
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    const cookies = req.cookies;
-    const { token } = cookies;
-    // console.log(token)
-    if (!token) {
-      throw new Error("Invalid Token");
-    }
-
-    const decodeMessage = await jwt.verify(token, "shhhhh");
-    const { _id } = decodeMessage;
-    const user = await User.findById(_id);
-
-    if (!user) {
-      throw new Error("Invalied User");
-    }
-
+    user = req.user;
     res.send(user);
-
-    // res.send(req.cookies)
   } catch (error) {
-    console.log("cannot get profile " + error);
+    res.status(404).send("ERROR :" + error.message);
   }
 });
 
