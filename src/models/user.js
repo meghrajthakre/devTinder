@@ -77,9 +77,9 @@ User.methods.jwtTokens = async function(){
 
 User.methods.comparePass = async function(passwordInputByUser){
   const user = this
-  const passwordHash = user.password
+  const passwordHashing = user.password
 
-  const isVerifyPass = await bcrypt.compare(passwordInputByUser,passwordHash);
+  const isVerifyPass = await bcrypt.compare(passwordInputByUser,passwordHashing);
   return isVerifyPass
 
 }
