@@ -45,10 +45,10 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("Email is Not Valid");
     }
-    const isPasswordVerify = await bcrypt.compare(password, user.password);
+    const isPasswordVerify = await user.comparePass(password) ;
     if (isPasswordVerify) {
       // setling the jwt token
-      const token = await jwt.sign({ _id: user._id }, "shhhhh", { expiresIn: '1d' });
+      const token = await user.jwtTokens()
 
       // sending the res back to client with cookie
       res.cookie("token", token, { maxAge: 24 * 60 * 60 * 1000 });
